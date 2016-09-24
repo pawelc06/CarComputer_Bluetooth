@@ -69,8 +69,7 @@ uint8_t lcd_buffer[17];	// LCD display buffer
 //LCD Messages
 const int8_t LCD_product[] PROGMEM = "Komputer sam.";
 const int8_t LCD_name[] PROGMEM = "    by Pawel    ";
-const int8_t LCD_VSS[] PROGMEM = "KmH\0";
-const int8_t LCD_MPG[] PROGMEM = "MPG\0";
+const int8_t LCD_VSS[] PROGMEM = "km/h\0";
 const int8_t LCD_RPM[] PROGMEM = "RPM\0";
 const int8_t LCD_Temp[] PROGMEM = "Temp\0";
 const int8_t LCD_Dist[] PROGMEM = "Dis\0";
