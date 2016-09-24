@@ -58,7 +58,43 @@
 #include <util/delay.h>
 #include "obd2.h"
 
+extern char voltage_str[10];
+extern char velocity[10];
+extern char rpm_str[10];
+extern char coolantTemp_str[10];
+volatile uint8_t refreshLCD=0;
 
+void displayData (void){
+	if(refreshLCD){
+		LcdGotoXYFont(3, 1);
+
+		LcdStr(FONT_1X, (unsigned char*) velocity);
+		LcdStr(FONT_1X, (unsigned char*) "km/h");
+
+		LcdGotoXYFont(5, 2);
+		LcdStr(FONT_1X, (unsigned char*) rpm_str);
+
+		LcdGotoXYFont(4, 4);
+		LcdStr(FONT_2X, (unsigned char*) voltage_str);
+		LcdStr(FONT_2X, (unsigned char*) "V ");
+
+		LcdGotoXYFont(6, 6);
+		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
+		LcdStr(FONT_1X, (unsigned char*) "C");
+
+		LcdUpdate();
+		refreshLCD = 0;
+	}
+}
+
+
+
+ISR (TIMER1_COMPA_vect)
+{
+    // action to be done every 1 sec
+	refreshLCD=1;
+
+}
 
 int main()
 {
@@ -67,13 +103,9 @@ int main()
 
 	initialize();
 	//LcdInit();
-	        LcdClear();
-
-	        LcdGotoXYFont(1,line++);
-	        LcdFStr(FONT_1X,(unsigned char*)PSTR(">"));
 
 
-LcdUpdate();
+
 
 //uart_init( UART_BAUD_SELECT(UART_BAUD_RATE,F_CPU) );
 uart_init1(UART_BAUD_RATE, 1);
@@ -81,7 +113,7 @@ uart_init1(UART_BAUD_RATE, 1);
 
      while(1){
     	 state_machine();
-
+    	 displayData();
      }
 
     return 0;

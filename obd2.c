@@ -91,20 +91,14 @@ uint8_t TEMP[6] = "01 05\r";
 uint8_t FUEL[6] = "01 2F\r";
 uint8_t ATSP[9] = "AT SP A4\r";
 
-char velocity[10];
+volatile char velocity[10]="0";
 char maf_str[10];
 char coolantTemp_str[10];
-char rpm_str[10];
+volatile char rpm_str[10];
+volatile char voltage_str[10]="0.0";
 
 //void uart0_send_byte(uint8_t data);
-void uart0_parse_rx(uint8_t rx_data);
 
-void initialize(void);
-void state_machine(void);
-void debounce_machine(void);
-
-//Update the current system in days/hours/minutes at a 1ms 
-void IncrementTime();
 
 //State Machine Marker
 int state;
@@ -140,6 +134,7 @@ volatile unsigned int year;
 
 /******************************************************************************************/
 // /**
+/*
 ISR (TIMER1_COMPA_vect) {
 	//Decrement the time if not already zero
 	if (realTimer > 0)
@@ -154,6 +149,7 @@ ISR (TIMER1_COMPA_vect) {
 		--lcdTimer;
 
 }
+*/
 
 //Parsing function based on current state
 void uart0_parse_rx(uint8_t rx_data) {
@@ -191,11 +187,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {
 			//display voltage
 			rx_buffer[rx_buffer_index] = 0;
-			LcdGotoXYFont(1, 4);
-			LcdStr(FONT_2X, (unsigned char*) "A:");
-			LcdStr(FONT_2X, (unsigned char*) rx_buffer);
-			LcdStr(FONT_2X, (unsigned char*) "V");
-			LcdUpdate();
+			strcpy(voltage_str,rx_buffer);
+
 
 			rx_buffer_index = 0;
 			state = Trans_MPG;
@@ -215,15 +208,9 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &kph);
 
-
-				LcdGotoXYFont(1, 1);
-				LcdStr(FONT_1X, (unsigned char*) "V: ");
-
 				sprintf(velocity, "%d  ", kph);
 
-				LcdStr(FONT_1X, (unsigned char*) velocity);
-				LcdStr(FONT_1X, (unsigned char*) "km/h");
-				LcdUpdate();
+
 
 
 
@@ -242,15 +229,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 			//fprintf(stdout,"%X %X\n\r", filter_41, filter_vss);
 
 			if ((filter_41 == 0x41) && (filter_rpm == 0x0C)) {
-				LcdGotoXYFont(1, 2);
-				LcdStr(FONT_1X, (unsigned char*) "RPM::");
+				LcdGotoXYFont(5, 2);
+
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
-				rpm = rpm_convert(temp_rpm1, temp_rpm2)
-				;
+				rpm = rpm_convert(temp_rpm1, temp_rpm2);
 				sprintf(rpm_str, "%d  ", rpm);
-				LcdStr(FONT_1X, (unsigned char*) rpm_str);
-				LcdUpdate();
+
+
 			}
 			rx_buffer_index = 0;
 			state = Trans_Coolant;
@@ -269,16 +255,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
 
-				LcdGotoXYFont(1, 6);
-				LcdStr(FONT_1X, (unsigned char*) "Temp: ");
+
+
 
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
 				temperature = temp_convert(temperature)
 				;
 				sprintf(coolantTemp_str, "%d  ", temperature);
-				LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
-				LcdStr(FONT_1X, (unsigned char*) "C");
-				LcdUpdate();
+
 
 			}
 			rx_buffer_index = 0;
@@ -356,8 +340,24 @@ void initialize(void) {
 	 DDRD = 0b00001010;	// PORT D is an input except for TX and LED
 	 PORTD =0b11111100;	// PORT D pullup MAKE SURE THATS OK FOR UART
 	 */
+	OCR1A = 0x3D08; //1 sec
+
+	    TCCR1B |= (1 << WGM12);
+	    // Mode 4, CTC on OCR1A
+
+	    TIMSK1 |= (1 << OCIE1A);
+	    //Set interrupt on compare match
+
+	    TCCR1B |= (1 << CS12) | (1 << CS10);
+	    // set prescaler to 1024 and start the timer
+
+
+	    sei();
+	    // enable interrupts
 
 	LcdInit();
+	LcdClear();
+
 
 	state = Initial;
 
@@ -416,6 +416,21 @@ void state_machine(void) {
 		_delay_ms(800);
 
 		LcdClear();
+		LcdGotoXYFont(1, 1);
+		LcdStr(FONT_1X, (unsigned char*) "V: ");
+
+		LcdGotoXYFont(1, 2);
+		LcdStr(FONT_1X, (unsigned char*) "RPM: ");
+
+		LcdGotoXYFont(1, 4);
+		LcdStr(FONT_2X, (unsigned char*) "A:");
+
+		LcdGotoXYFont(1, 6);
+		LcdStr(FONT_1X, (unsigned char*) "Temp: ");
+
+
+
+		LcdUpdate();
 		state = Trans_Reset;
 
 		break;
