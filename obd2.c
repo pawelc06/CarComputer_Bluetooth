@@ -93,7 +93,7 @@ uint8_t ATSP[9] = "AT SP A4\r";
 
 volatile char velocity[10]="0";
 char maf_str[10];
-char coolantTemp_str[10];
+volatile char coolantTemp_str[10]="  0";
 volatile char rpm_str[10];
 volatile char voltage_str[10]="0.0";
 
@@ -208,7 +208,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &kph);
 
-				sprintf(velocity, "%d  ", kph);
+				sprintf(velocity, "%3d  ", kph);
 
 
 
@@ -234,7 +234,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
 				rpm = rpm_convert(temp_rpm1, temp_rpm2);
-				sprintf(rpm_str, "%d  ", rpm);
+				sprintf(rpm_str, "%4d  ", rpm);
 
 
 			}
@@ -261,7 +261,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
 				temperature = temp_convert(temperature)
 				;
-				sprintf(coolantTemp_str, "%d  ", temperature);
+				sprintf(coolantTemp_str, "%3d  ", temperature);
 
 
 			}
@@ -422,8 +422,8 @@ void state_machine(void) {
 		LcdGotoXYFont(1, 2);
 		LcdStr(FONT_1X, (unsigned char*) "RPM: ");
 
-		LcdGotoXYFont(1, 4);
-		LcdStr(FONT_2X, (unsigned char*) "A:");
+		LcdGotoXYFont(1, 3);
+		LcdStr(FONT_1X, (unsigned char*) "A:");
 
 		LcdGotoXYFont(1, 6);
 		LcdStr(FONT_1X, (unsigned char*) "Temp: ");

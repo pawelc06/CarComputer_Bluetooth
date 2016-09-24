@@ -65,26 +65,42 @@ extern char coolantTemp_str[10];
 volatile uint8_t refreshLCD=0;
 
 void displayData (void){
-	if(refreshLCD){
-		LcdGotoXYFont(3, 1);
+
+	switch (refreshLCD) {
+
+	case 1:
+		LcdGotoXYFont(6, 1);
 
 		LcdStr(FONT_1X, (unsigned char*) velocity);
 		LcdStr(FONT_1X, (unsigned char*) "km/h");
+		refreshLCD = 2;
+		break;
 
-		LcdGotoXYFont(5, 2);
+	case 2:
+		LcdGotoXYFont(6, 2);
 		LcdStr(FONT_1X, (unsigned char*) rpm_str);
+		refreshLCD = 3;
+		break;
 
-		LcdGotoXYFont(4, 4);
-		LcdStr(FONT_2X, (unsigned char*) voltage_str);
-		LcdStr(FONT_2X, (unsigned char*) "V ");
+	case 3:
+		LcdGotoXYFont(6, 3);
+		LcdStr(FONT_1X, (unsigned char*) voltage_str);
+		LcdStr(FONT_1X, (unsigned char*) " V ");
+		refreshLCD = 4;
+		break;
 
+	case 4:
 		LcdGotoXYFont(6, 6);
 		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
 		LcdStr(FONT_1X, (unsigned char*) "C");
-
-		LcdUpdate();
 		refreshLCD = 0;
+		break;
+
+
+
 	}
+	if(refreshLCD>0)
+		LcdUpdate();
 }
 
 
