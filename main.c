@@ -62,6 +62,10 @@ extern char voltage_str[10];
 extern char velocity[10];
 extern char rpm_str[10];
 extern char coolantTemp_str[10];
+extern char map_str[10];
+extern char iat_str[10];
+extern char mpg1_str[10];
+
 volatile uint8_t refreshLCD=0;
 
 void displayData (void){
@@ -69,7 +73,7 @@ void displayData (void){
 	switch (refreshLCD) {
 
 	case 1:
-		LcdGotoXYFont(6, 1);
+		LcdGotoXYFont(5, 1);
 
 		LcdStr(FONT_1X, (unsigned char*) velocity);
 		LcdStr(FONT_1X, (unsigned char*) "km/h");
@@ -77,22 +81,43 @@ void displayData (void){
 		break;
 
 	case 2:
-		LcdGotoXYFont(6, 2);
+		LcdGotoXYFont(5, 2);
 		LcdStr(FONT_1X, (unsigned char*) rpm_str);
 		refreshLCD = 3;
 		break;
 
 	case 3:
-		LcdGotoXYFont(6, 3);
+		LcdGotoXYFont(5, 3);
 		LcdStr(FONT_1X, (unsigned char*) voltage_str);
 		LcdStr(FONT_1X, (unsigned char*) " V ");
 		refreshLCD = 4;
 		break;
 
 	case 4:
+			LcdGotoXYFont(5, 4);
+			LcdStr(FONT_1X, (unsigned char*) map_str);
+			//LcdStr(FONT_1X, (unsigned char*) "C");
+			refreshLCD = 5;
+			break;
+
+	case 5:
+			LcdGotoXYFont(5, 5);
+			LcdStr(FONT_1X, (unsigned char*) iat_str);
+			//LcdStr(FONT_1X, (unsigned char*) "C");
+			refreshLCD = 6;
+			break;
+
+
+	case 6:
+		/*
 		LcdGotoXYFont(6, 6);
 		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
 		LcdStr(FONT_1X, (unsigned char*) "C");
+		*/
+		LcdGotoXYFont(5, 6);
+		LcdStr(FONT_1X, (unsigned char*) mpg1_str);
+		LcdStr(FONT_1X, (unsigned char*) "l/100km");
+
 		refreshLCD = 0;
 		break;
 

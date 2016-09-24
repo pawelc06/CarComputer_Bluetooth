@@ -29,6 +29,10 @@
 #define Rec_atsp 18
 #define Trans_Voltage 19
 #define Rec_Voltage 20
+#define Trans_MAP 21
+#define Rec_MAP	22
+#define Trans_IAT 23
+#define Rec_IAT	24
 #define N_DECIMAL_POINTS_PRECISION (100) // n = 3. Three decimal points.
 
 //Data conversion
@@ -91,30 +95,33 @@ uint8_t TEMP[6] = "01 05\r";
 uint8_t FUEL[6] = "01 2F\r";
 uint8_t ATSP[9] = "AT SP A4\r";
 
-volatile char velocity[10]="0";
+volatile char velocity[10] = "0";
 char maf_str[10];
-volatile char coolantTemp_str[10]="  0";
+volatile char coolantTemp_str[10] = "  0";
 volatile char rpm_str[10];
-volatile char voltage_str[10]="0.0";
+volatile char voltage_str[10] = "0.0";
+volatile char map_str[10] = "0";
+volatile char iat_str[10] = "0";
+volatile char mpg1_str[10] = "0";
 
 //void uart0_send_byte(uint8_t data);
-
 
 //State Machine Marker
 int state;
 
 //Car data
-int kph, temperature, rpm;
+int kph, temperature, rpm, map, iat;
 int sec;
 int temp_sec;
 volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
-double mpg, maf, gph, lph, kpg;
+double mpg,lp100km, maf,maf1, gph, lph, kpg;
 
 int temp, decimalPart;
 
-uint8_t filter_vss, filter_41, filter_maf, filter_rpm, filter_temp;
+uint8_t filter_vss, filter_41, filter_maf, filter_rpm, filter_temp, filter_map,
+		filter_iat;
 
 unsigned int temp_maf1, temp_maf2;
 unsigned int temp_rpm1, temp_rpm2;
@@ -135,21 +142,21 @@ volatile unsigned int year;
 /******************************************************************************************/
 // /**
 /*
-ISR (TIMER1_COMPA_vect) {
-	//Decrement the time if not already zero
-	if (realTimer > 0)
-		--realTimer;
-	if (realTimer == 0) {
-		realTimer = t2;
-		IncrementTime();
-	}
-	if (buttonTimer > 0)
-		--buttonTimer;
-	if (lcdTimer > 0)
-		--lcdTimer;
+ ISR (TIMER1_COMPA_vect) {
+ //Decrement the time if not already zero
+ if (realTimer > 0)
+ --realTimer;
+ if (realTimer == 0) {
+ realTimer = t2;
+ IncrementTime();
+ }
+ if (buttonTimer > 0)
+ --buttonTimer;
+ if (lcdTimer > 0)
+ --lcdTimer;
 
-}
-*/
+ }
+ */
 
 //Parsing function based on current state
 void uart0_parse_rx(uint8_t rx_data) {
@@ -187,8 +194,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {
 			//display voltage
 			rx_buffer[rx_buffer_index] = 0;
-			strcpy(voltage_str,rx_buffer);
-
+			strcpy(voltage_str, rx_buffer);
 
 			rx_buffer_index = 0;
 			state = Trans_MPG;
@@ -210,10 +216,6 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				sprintf(velocity, "%3d  ", kph);
 
-
-
-
-
 			}
 
 			rx_buffer_index = 0;
@@ -231,11 +233,10 @@ void uart0_parse_rx(uint8_t rx_data) {
 			if ((filter_41 == 0x41) && (filter_rpm == 0x0C)) {
 				LcdGotoXYFont(5, 2);
 
-
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
-				rpm = rpm_convert(temp_rpm1, temp_rpm2);
+				rpm = rpm_convert(temp_rpm1, temp_rpm2)
+				;
 				sprintf(rpm_str, "%4d  ", rpm);
-
 
 			}
 			rx_buffer_index = 0;
@@ -247,7 +248,6 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 	else if (state == Rec_Coolant) {
 
-		LcdUpdate();
 		if (rx_data == 0x3E) {
 
 			_delay_ms(30); //was 50
@@ -255,14 +255,71 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
 
-
-
-
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
 				temperature = temp_convert(temperature)
 				;
 				sprintf(coolantTemp_str, "%3d  ", temperature);
 
+			}
+			rx_buffer_index = 0;
+			//state = Trans_MPG;
+			state = Trans_MAP;
+		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
+			rx_buffer[rx_buffer_index++] = rx_data;
+		}
+	}
+
+	else if (state == Rec_MAP) {
+
+		if (rx_data == 0x3E) {
+
+			_delay_ms(30); //was 50
+			sscanf(rx_buffer, "%X %X", &filter_41, &filter_map);
+
+			if ((filter_41 == 0x41) && (filter_map == 0x0B)) {
+
+				sscanf(rx_buffer, "%*s %*s %X", &map);
+
+				sprintf(map_str, "%3d  ", map);
+
+			}
+			rx_buffer_index = 0;
+			//state = Trans_MPG;
+			state = Trans_IAT;
+		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
+			rx_buffer[rx_buffer_index++] = rx_data;
+		}
+	}
+
+	else if (state == Rec_IAT) {
+
+		if (rx_data == 0x3E) {
+
+			_delay_ms(30); //was 50
+			sscanf(rx_buffer, "%X %X", &filter_41, &filter_iat);
+
+			if ((filter_41 == 0x41) && (filter_iat == 0x0F)) {
+
+				sscanf(rx_buffer, "%*s %*s %X", &iat);
+
+				sprintf(iat_str, "%3d  ", iat);
+
+				if(map >0 && iat >0){
+				maf1 =  14.7 * rpm * map / iat;
+
+				lp100km = kph * 7.718/maf1; //miles per gallon
+
+				lp100km = kph * 7.718/(maf1*0.621317); //km per gallon
+
+				lp100km =  (maf1*0.621317)/(kph *7.718); //gallons per km
+
+				lp100km =  (maf1*0.621317)*3.785411784/(kph *7.718); //litres per km
+
+				lp100km = (maf1*0.621317)*3.785411784*100/(kph *7.718); //litres per 100 km
+
+				if(lp100km < 100.0f)
+					sprintf(mpg1_str, "%2.2f  ", lp100km);
+				}
 
 			}
 			rx_buffer_index = 0;
@@ -271,7 +328,9 @@ void uart0_parse_rx(uint8_t rx_data) {
 		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
 			rx_buffer[rx_buffer_index++] = rx_data;
 		}
-	} else if (state == Rec_MPG) {
+	}
+
+	else if (state == Rec_MPG) {
 
 		if (rx_data == 0x3E) {
 
@@ -285,35 +344,24 @@ void uart0_parse_rx(uint8_t rx_data) {
 				 *
 				 * Fuel Flow = Air Flow / Stoichiometric Ratio.
 
-For a gasoline (petrol) engine, the stoichiometric ratio is 14.7.
-The air flow is obtained by a MAF (Mass Air Flow) sensor, and it is available over OBD2.
+				 For a gasoline (petrol) engine, the stoichiometric ratio is 14.7.
+				 The air flow is obtained by a MAF (Mass Air Flow) sensor, and it is available over OBD2.
 
-If there is no MAF sensor, then the MAP (Manifold Absolute Pressure) sensor can be used:
+				 If there is no MAF sensor, then the MAP (Manifold Absolute Pressure) sensor can be used:
 
-   Air Flow = C x RPM x MAP / Absolute Temperature.
-   MPG =VSS * 7.718/MAF
+				 Air Flow = C x RPM x MAP / Absolute Temperature.
+				 MPG =VSS * 7.718/MAF
 				 */
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
-				maf = airflowrate_convert(temp_maf1, temp_maf2)
-				;
+				maf = airflowrate_convert(temp_maf1, temp_maf2);
 				gph = (maf * 0.0805);
-				lph = lph_convert(gph)
-				;
+				lph = lph_convert(gph);
 				kpg = (double) (kph / gph);
 
 				temp = (int) (kpg);
 				decimalPart = ((int) (kpg * N_DECIMAL_POINTS_PRECISION)
 						% N_DECIMAL_POINTS_PRECISION);
-
-				//sprintf(maf_str,"MAF: %X %X", temp_maf1,temp_maf2);
-				/*
-				sprintf(maf_str, "MAF: %3.2f", maf);
-				LcdGotoXYFont(1, 5);
-				LcdStr(FONT_1X, (unsigned char*) maf_str);
-				LcdUpdate();
-				*/
-				_delay_ms(200);
 
 			}
 			rx_buffer_index = 0;
@@ -342,22 +390,20 @@ void initialize(void) {
 	 */
 	OCR1A = 0x3D08; //1 sec
 
-	    TCCR1B |= (1 << WGM12);
-	    // Mode 4, CTC on OCR1A
+	TCCR1B |= (1 << WGM12);
+	// Mode 4, CTC on OCR1A
 
-	    TIMSK1 |= (1 << OCIE1A);
-	    //Set interrupt on compare match
+	TIMSK1 |= (1 << OCIE1A);
+	//Set interrupt on compare match
 
-	    TCCR1B |= (1 << CS12) | (1 << CS10);
-	    // set prescaler to 1024 and start the timer
+	TCCR1B |= (1 << CS12) | (1 << CS10);
+	// set prescaler to 1024 and start the timer
 
-
-	    sei();
-	    // enable interrupts
+	sei();
+	// enable interrupts
 
 	LcdInit();
 	LcdClear();
-
 
 	state = Initial;
 
@@ -425,10 +471,14 @@ void state_machine(void) {
 		LcdGotoXYFont(1, 3);
 		LcdStr(FONT_1X, (unsigned char*) "A:");
 
+		LcdGotoXYFont(1, 4);
+		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
+
+		LcdGotoXYFont(1, 5);
+		LcdStr(FONT_1X, (unsigned char*) "IAT: ");
+
 		LcdGotoXYFont(1, 6);
-		LcdStr(FONT_1X, (unsigned char*) "Temp: ");
-
-
+		LcdStr(FONT_1X, (unsigned char*) "FC:");
 
 		LcdUpdate();
 		state = Trans_Reset;
@@ -525,21 +575,18 @@ void state_machine(void) {
 		}
 		break;
 
+	case Trans_Voltage:
+		uart_nprint(VOL, 6);
 
-		 case Trans_Voltage:
-			 uart_nprint(VOL,6);
+		state = Rec_Voltage;
+		break;
 
-			 state = Rec_Voltage;
-			 break;
+	case Rec_Voltage:
+		if (UCSR0A & (1 << RXC0)) {
+			uart0_parse_rx(UDR0);
 
-
-		 case Rec_Voltage:
-			 if(UCSR0A & (1<<RXC0)) {
-			 uart0_parse_rx(UDR0);
-
-			 }
-			 break;
-
+		}
+		break;
 
 	case Trans_RPM:
 
@@ -554,6 +601,34 @@ void state_machine(void) {
 
 		}
 		break;
+
+	case Trans_MAP:
+
+			uart_nprint(MAP, 6);
+
+			state = Rec_MAP;
+			break;
+
+		case Rec_MAP:
+			if (UCSR0A & (1 << RXC0)) {
+				uart0_parse_rx(UDR0);
+
+			}
+			break;
+
+		case Trans_IAT:
+
+				uart_nprint(IAT, 6);
+
+				state = Rec_IAT;
+				break;
+
+			case Rec_IAT:
+				if (UCSR0A & (1 << RXC0)) {
+					uart0_parse_rx(UDR0);
+
+				}
+				break;
 
 	case Trans_Coolant:
 		uart_nprint(TEMP, 6);
