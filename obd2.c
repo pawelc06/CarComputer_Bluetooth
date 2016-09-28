@@ -7,6 +7,7 @@
 #include "pcd8544.h"
 #include "uart.h"
 #include "obd2.h"
+#include "adc.h"
 
 //State Machine States
 #define Initial 1
@@ -100,6 +101,7 @@ char maf_str[10];
 volatile char coolantTemp_str[10] = "  0";
 volatile char rpm_str[10];
 volatile char voltage_str[10] = "0.0";
+volatile char voltage_analog_str[10] = "0";
 volatile char map_str[10] = "0";
 volatile char iat_str[10] = "0";
 volatile char mpg1_str[10] = "0";
@@ -161,6 +163,9 @@ volatile unsigned int year;
 //Parsing function based on current state
 void uart0_parse_rx(uint8_t rx_data) {
 
+	uint16_t vAdc;
+	float vAdcf;
+
 	if (state == Rec_EchoOff) {
 		if (rx_data == 0x3E) {
 			rx_buffer_index = 0;
@@ -195,6 +200,11 @@ void uart0_parse_rx(uint8_t rx_data) {
 			//display voltage
 			rx_buffer[rx_buffer_index] = 0;
 			strcpy(voltage_str, rx_buffer);
+
+			vAdc = ReadADC(0);
+			vAdcf = (float) vAdc / 63.0;
+			//vAdc = 123;
+			sprintf(voltage_analog_str, "%2.1f", vAdcf);
 
 			rx_buffer_index = 0;
 			state = Trans_MPG;
@@ -469,17 +479,21 @@ void state_machine(void) {
 		LcdStr(FONT_1X, (unsigned char*) "RPM: ");
 
 		LcdGotoXYFont(1, 3);
-		LcdStr(FONT_1X, (unsigned char*) "A:");
+		LcdStr(FONT_1X, (unsigned char*) "AD:");
 
 		LcdGotoXYFont(1, 4);
-		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
+		LcdStr(FONT_1X, (unsigned char*) "AO:");
 
 		LcdGotoXYFont(1, 5);
-		LcdStr(FONT_1X, (unsigned char*) "IAT: ");
+		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
 
 		LcdGotoXYFont(1, 6);
-		LcdStr(FONT_1X, (unsigned char*) "FC:");
+		LcdStr(FONT_1X, (unsigned char*) "IAT: ");
 
+		/*
+		LcdGotoXYFont(1, 6);
+		LcdStr(FONT_1X, (unsigned char*) "FC:");
+*/
 		LcdUpdate();
 		state = Trans_Reset;
 
