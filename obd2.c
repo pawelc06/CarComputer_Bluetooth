@@ -105,6 +105,9 @@ volatile char voltage_analog_str[10] = "0";
 volatile char map_str[10] = "0";
 volatile char iat_str[10] = "0";
 volatile char lp100km_str[10] = "0";
+volatile char lp100kmAvg_str[10] = "0";
+double fcBuffer[100];
+uint8_t fcn=0;
 
 //void uart0_send_byte(uint8_t data);
 
@@ -118,7 +121,7 @@ int temp_sec;
 volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
-double mpg,lp100km, maf,maf1, gph, lph, kpg,imap,ff;
+double mpg,lp100km, maf,maf1, gph, lph, kpg,imap,ff,lp100kmAvg;
 
 int temp, decimalPart;
 
@@ -159,6 +162,19 @@ volatile unsigned int year;
 
  }
  */
+
+double calculateAvgFuelConfumption(double * buffer){
+	double avgFC, sum;
+	uint8_t i;
+
+	sum=0;
+	for(i=0;i<100;i++){
+		sum=sum+buffer[i];
+	}
+	avgFC = sum/100.0;
+
+	return avgFC;
+}
 
 //Parsing function based on current state
 void uart0_parse_rx(uint8_t rx_data) {
@@ -224,6 +240,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &kph);
 
+				//kph=18;
+
 				sprintf(velocity, "%3d  ", kph);
 
 			}
@@ -244,8 +262,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 				LcdGotoXYFont(5, 2);
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
-				rpm = rpm_convert(temp_rpm1, temp_rpm2)
-				;
+				rpm = rpm_convert(temp_rpm1, temp_rpm2);
+				//rpm = 1500;
 				sprintf(rpm_str, "%4d  ", rpm);
 
 			}
@@ -289,7 +307,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			if ((filter_41 == 0x41) && (filter_map == 0x0B)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &map);
-
+				//map = 43;
 				sprintf(map_str, "%3d  ", map);
 
 			}
@@ -311,18 +329,29 @@ void uart0_parse_rx(uint8_t rx_data) {
 			if ((filter_41 == 0x41) && (filter_iat == 0x0F)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &iat);
-
+				//iat = 63;
 				sprintf(iat_str, "%3d  ", iat);
 
 				if(map >0 && iat >0){
 
 				imap = (double)rpm*map/(iat-40+273)/2;
 				maf1 = (imap/60.0)*(0.6)*1.58*28.97/8.314;
-				ff = (maf1*3600.0)/(14,7*820.0);
+				ff = (maf1*3600.0)/(14.7*820.0);
 				lp100km = ff*100.0/kph;
 
 				if(lp100km < 100.0f)
+					fcBuffer[fcn] = lp100km;
+					fcn = fcn+1;
+					if(fcn==100){
+						lp100kmAvg = calculateAvgFuelConfumption(fcBuffer);
+						sprintf(lp100kmAvg_str, "%2.1f  ", lp100kmAvg);
+						fcn = 0;
+					}
+
 					sprintf(lp100km_str, "%2.1f  ", lp100km);
+					//sprintf(lp100km_str, "%3.1f  ", imap);
+					//sprintf(lp100km_str, "%1.2f  ", maf1);
+					//sprintf(lp100km_str, "%1.2f  ", ff);
 				}
 
 			}
@@ -484,7 +513,7 @@ void state_machine(void) {
 		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
 
 		LcdGotoXYFont(1, 5);
-		LcdStr(FONT_1X, (unsigned char*) "IAT: ");
+		LcdStr(FONT_1X, (unsigned char*) "FCA: ");
 
 
 		LcdGotoXYFont(1, 6);

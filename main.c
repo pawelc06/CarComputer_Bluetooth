@@ -67,6 +67,7 @@ extern char coolantTemp_str[10];
 extern char map_str[10];
 extern char iat_str[10];
 extern char lp100km_str[10];
+extern char lp100kmAvg_str[10];
 
 volatile uint8_t refreshLCD=0;
 
@@ -114,7 +115,8 @@ void displayData (void){
 
 	case 5:
 			LcdGotoXYFont(5, 5);
-			LcdStr(FONT_1X, (unsigned char*) iat_str);
+			//LcdStr(FONT_1X, (unsigned char*) iat_str);
+			LcdStr(FONT_1X, (unsigned char*) lp100kmAvg_str);
 			//LcdStr(FONT_1X, (unsigned char*) "C");
 			refreshLCD = 6;
 			break;
