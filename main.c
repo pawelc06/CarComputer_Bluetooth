@@ -77,6 +77,7 @@ void displayData (void){
 
 	switch (refreshLCD) {
 
+	/*
 	case 1:
 		LcdGotoXYFont(5, 1);
 
@@ -90,46 +91,51 @@ void displayData (void){
 		LcdStr(FONT_1X, (unsigned char*) rpm_str);
 		refreshLCD = 3;
 		break;
+		*/
 
-	case 3:
+	case 1:
 
 
-		LcdGotoXYFont(5, 3);
-		LcdStr(FONT_1X, (unsigned char*) voltage_analog_str);
-		LcdStr(FONT_1X, (unsigned char*) " V ");
+		LcdGotoXYFont(5, 2);
+		LcdStr(FONT_2X, (unsigned char*) voltage_analog_str);
+		LcdStr(FONT_2X, (unsigned char*) "V");
 		/*
 		LcdGotoXYFont(5, 4);
 		LcdStr(FONT_1X, (unsigned char*) voltage_str);
 		LcdStr(FONT_1X, (unsigned char*) " V ");
 		*/
-		refreshLCD = 4;
+		refreshLCD = 2;
 
 		break;
 
-	case 4:
+	/*
+	case 2:
 			LcdGotoXYFont(5, 4);
 			LcdStr(FONT_1X, (unsigned char*) map_str);
 			//LcdStr(FONT_1X, (unsigned char*) "C");
-			refreshLCD = 5;
+			refreshLCD = 3;
 			break;
+			*/
 
-	case 5:
-			LcdGotoXYFont(5, 5);
+	case 2:
+
+			LcdGotoXYFont(5, 4);
 			//LcdStr(FONT_1X, (unsigned char*) iat_str);
-			LcdStr(FONT_1X, (unsigned char*) lp100kmAvg_str);
+			LcdStr(FONT_2X, (unsigned char*) lp100kmAvg_str);
 			//LcdStr(FONT_1X, (unsigned char*) "C");
-			refreshLCD = 6;
+			refreshLCD = 3;
 			break;
 
 
-	case 6:
+	case 3:
 		/*
 		LcdGotoXYFont(6, 6);
 		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
 		LcdStr(FONT_1X, (unsigned char*) "C");
 		*/
+
 		LcdGotoXYFont(5, 6);
-		LcdStr(FONT_1X, (unsigned char*) lp100km_str);
+		LcdStr(FONT_2X, (unsigned char*) lp100km_str);
 		//LcdStr(FONT_1X, (unsigned char*) "l/100km");
 
 		refreshLCD = 0;

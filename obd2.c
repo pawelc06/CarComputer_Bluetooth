@@ -223,7 +223,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			sprintf(voltage_analog_str, "%2.1f", vAdcf);
 
 			rx_buffer_index = 0;
-			state = Trans_MPG;
+			state = Trans_VSS;
 		} else if (rx_data >= 0x20 && rx_data <= 0x3A) {
 			rx_buffer[rx_buffer_index++] = rx_data;
 		}
@@ -231,7 +231,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 	else if (state == Rec_VSS) {
 
-		if (rx_data == 0x3E) {// 3E es el simbolo < que prmptea el elm327 en codigo ascii
+		if (rx_data == 0x3E) {// 3E - ">" prompt
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_vss);
 
 			sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
@@ -242,7 +242,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				//kph=18;
 
-				sprintf(velocity, "%3d  ", kph);
+				//sprintf(velocity, "%3d  ", kph);
 
 			}
 
@@ -264,7 +264,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
 				rpm = rpm_convert(temp_rpm1, temp_rpm2);
 				//rpm = 1500;
-				sprintf(rpm_str, "%4d  ", rpm);
+				//sprintf(rpm_str, "%4d  ", rpm);
 
 			}
 			rx_buffer_index = 0;
@@ -284,9 +284,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
-				temperature = temp_convert(temperature)
-				;
-				sprintf(coolantTemp_str, "%3d  ", temperature);
+				temperature = temp_convert(temperature);
+				//sprintf(coolantTemp_str, "%3d  ", temperature);
 
 			}
 			rx_buffer_index = 0;
@@ -348,6 +347,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 						fcn = 0;
 					}
 
+					if(lp100km<100)
 					sprintf(lp100km_str, "%2.1f  ", lp100km);
 					//sprintf(lp100km_str, "%3.1f  ", imap);
 					//sprintf(lp100km_str, "%1.2f  ", maf1);
@@ -363,47 +363,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 		}
 	}
 
-	else if (state == Rec_MPG) {
 
-		if (rx_data == 0x3E) {
-
-			sscanf(rx_buffer, "%X %X", &filter_41, &filter_maf);
-			//fprintf(stdout,"%X %X\n\r", filter_41, filter_vss);
-
-			if ((filter_41 == 0x41) && (filter_maf == 0x10)) {
-
-				//LcdStr(FONT_1X,(unsigned char*)"MPG: ");
-				/*
-				 *
-				 * Fuel Flow = Air Flow / Stoichiometric Ratio.
-
-				 For a gasoline (petrol) engine, the stoichiometric ratio is 14.7.
-				 The air flow is obtained by a MAF (Mass Air Flow) sensor, and it is available over OBD2.
-
-				 If there is no MAF sensor, then the MAP (Manifold Absolute Pressure) sensor can be used:
-
-				 Air Flow = C x RPM x MAP / Absolute Temperature.
-				 MPG =VSS * 7.718/MAF
-				 */
-
-				sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
-				maf = airflowrate_convert(temp_maf1, temp_maf2);
-				gph = (maf * 0.0805);
-				lph = lph_convert(gph);
-				kpg = (double) (kph / gph);
-
-				temp = (int) (kpg);
-				decimalPart = ((int) (kpg * N_DECIMAL_POINTS_PRECISION)
-						% N_DECIMAL_POINTS_PRECISION);
-
-			}
-			rx_buffer_index = 0;
-			state = Trans_VSS;
-		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
-			rx_buffer[rx_buffer_index++] = rx_data;
-
-		}
-	}
 }
 
 void initialize(void) {
@@ -495,29 +455,33 @@ void state_machine(void) {
 		_delay_ms(800);
 
 		LcdClear();
+		/*
 		LcdGotoXYFont(1, 1);
 		LcdStr(FONT_1X, (unsigned char*) "V: ");
 
 		LcdGotoXYFont(1, 2);
 		LcdStr(FONT_1X, (unsigned char*) "RPM: ");
+		 */
 
-		LcdGotoXYFont(1, 3);
-		LcdStr(FONT_1X, (unsigned char*) "AD:");
+		LcdGotoXYFont(1, 2);
+		LcdStr(FONT_2X, (unsigned char*) "U:");
 
 		/*
 		LcdGotoXYFont(1, 4);
 		LcdStr(FONT_1X, (unsigned char*) "AO:");
 		*/
 
+		/*
 		LcdGotoXYFont(1, 4);
 		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
+		*/
 
-		LcdGotoXYFont(1, 5);
-		LcdStr(FONT_1X, (unsigned char*) "FCA: ");
+		LcdGotoXYFont(1, 4);
+		LcdStr(FONT_2X, (unsigned char*) "A:");
 
 
 		LcdGotoXYFont(1, 6);
-		LcdStr(FONT_1X, (unsigned char*) "FC:");
+		LcdStr(FONT_2X, (unsigned char*) "C:");
 
 		LcdUpdate();
 		state = Trans_Reset;
@@ -684,49 +648,7 @@ void state_machine(void) {
 
 	}
 }
-/*
- void init_lcd(void) {
- LCDinit();	//initialize the display
- LCDcursorOFF();
- LCDclr();				//clear the display
- }
- */
 
-//*******************************   
-//Button Debouncer  
-/*
- void debouncer(void)
- {
- switch (PushState)
- {
- case NoPush:
- if (~PIND & 0x04) PushState=MaybePush; //0x04 = 0b00000100 0b11111011
- else PushState=NoPush;
- break;
- case MaybePush:
- if (~PIND & 0x04)
- {
- PushState=Pushed;
- PushFlag=1;
- }
- else PushState=NoPush;
- break;
- case Pushed:
- if (~PIND & 0x04) PushState=Pushed;
- else PushState=MaybeNoPush;
- break;
- case MaybeNoPush:
- if (~PIND & 0x04) PushState=Pushed;
- else
- {
- PushState=NoPush;
- PushFlag=0;
- }
- break;
- }
- }
-
- */
 
 void IncrementTime() {
 	millis++;
