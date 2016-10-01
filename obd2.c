@@ -104,7 +104,7 @@ volatile char voltage_str[10] = "0.0";
 volatile char voltage_analog_str[10] = "0";
 volatile char map_str[10] = "0";
 volatile char iat_str[10] = "0";
-volatile char mpg1_str[10] = "0";
+volatile char lp100km_str[10] = "0";
 
 //void uart0_send_byte(uint8_t data);
 
@@ -118,7 +118,7 @@ int temp_sec;
 volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
-double mpg,lp100km, maf,maf1, gph, lph, kpg;
+double mpg,lp100km, maf,maf1, gph, lph, kpg,imap,ff;
 
 int temp, decimalPart;
 
@@ -315,20 +315,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 				sprintf(iat_str, "%3d  ", iat);
 
 				if(map >0 && iat >0){
-				maf1 =  14.7 * rpm * map / iat;
 
-				lp100km = kph * 7.718/maf1; //miles per gallon
-
-				lp100km = kph * 7.718/(maf1*0.621317); //km per gallon
-
-				lp100km =  (maf1*0.621317)/(kph *7.718); //gallons per km
-
-				lp100km =  (maf1*0.621317)*3.785411784/(kph *7.718); //litres per km
-
-				lp100km = (maf1*0.621317)*3.785411784*100/(kph *7.718); //litres per 100 km
+				imap = (double)rpm*map/(iat-40+273)/2;
+				maf1 = (imap/60.0)*(0.6)*1.58*28.97/8.314;
+				ff = (maf1*3600.0)/(14,7*820.0);
+				lp100km = ff*100.0/kph;
 
 				if(lp100km < 100.0f)
-					sprintf(mpg1_str, "%2.2f  ", lp100km);
+					sprintf(lp100km_str, "%2.1f  ", lp100km);
 				}
 
 			}
@@ -481,19 +475,21 @@ void state_machine(void) {
 		LcdGotoXYFont(1, 3);
 		LcdStr(FONT_1X, (unsigned char*) "AD:");
 
+		/*
 		LcdGotoXYFont(1, 4);
 		LcdStr(FONT_1X, (unsigned char*) "AO:");
+		*/
 
-		LcdGotoXYFont(1, 5);
+		LcdGotoXYFont(1, 4);
 		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
 
-		LcdGotoXYFont(1, 6);
+		LcdGotoXYFont(1, 5);
 		LcdStr(FONT_1X, (unsigned char*) "IAT: ");
 
-		/*
+
 		LcdGotoXYFont(1, 6);
 		LcdStr(FONT_1X, (unsigned char*) "FC:");
-*/
+
 		LcdUpdate();
 		state = Trans_Reset;
 

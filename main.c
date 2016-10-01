@@ -66,7 +66,7 @@ extern char rpm_str[10];
 extern char coolantTemp_str[10];
 extern char map_str[10];
 extern char iat_str[10];
-extern char mpg1_str[10];
+extern char lp100km_str[10];
 
 volatile uint8_t refreshLCD=0;
 
@@ -96,21 +96,24 @@ void displayData (void){
 		LcdGotoXYFont(5, 3);
 		LcdStr(FONT_1X, (unsigned char*) voltage_analog_str);
 		LcdStr(FONT_1X, (unsigned char*) " V ");
+		/*
 		LcdGotoXYFont(5, 4);
 		LcdStr(FONT_1X, (unsigned char*) voltage_str);
 		LcdStr(FONT_1X, (unsigned char*) " V ");
+		*/
 		refreshLCD = 4;
+
 		break;
 
 	case 4:
-			LcdGotoXYFont(5, 5);
+			LcdGotoXYFont(5, 4);
 			LcdStr(FONT_1X, (unsigned char*) map_str);
 			//LcdStr(FONT_1X, (unsigned char*) "C");
 			refreshLCD = 5;
 			break;
 
 	case 5:
-			LcdGotoXYFont(5, 6);
+			LcdGotoXYFont(5, 5);
 			LcdStr(FONT_1X, (unsigned char*) iat_str);
 			//LcdStr(FONT_1X, (unsigned char*) "C");
 			refreshLCD = 6;
@@ -123,8 +126,8 @@ void displayData (void){
 		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
 		LcdStr(FONT_1X, (unsigned char*) "C");
 		*/
-		//LcdGotoXYFont(5, 6);
-		//LcdStr(FONT_1X, (unsigned char*) mpg1_str);
+		LcdGotoXYFont(5, 6);
+		LcdStr(FONT_1X, (unsigned char*) lp100km_str);
 		//LcdStr(FONT_1X, (unsigned char*) "l/100km");
 
 		refreshLCD = 0;
