@@ -4,10 +4,14 @@
 #include <math.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-#include "pcd8544.h"
+
 #include "uart.h"
 #include "obd2.h"
 #include "adc.h"
+
+#include "ili9341.h"
+#include "ili9341gfx.h"
+#define POINTCOLOUR PINK
 
 //State Machine States
 #define Initial 1
@@ -145,23 +149,8 @@ volatile unsigned int month;
 volatile unsigned int year;
 
 /******************************************************************************************/
-// /**
-/*
- ISR (TIMER1_COMPA_vect) {
- //Decrement the time if not already zero
- if (realTimer > 0)
- --realTimer;
- if (realTimer == 0) {
- realTimer = t2;
- IncrementTime();
- }
- if (buttonTimer > 0)
- --buttonTimer;
- if (lcdTimer > 0)
- --lcdTimer;
-
- }
- */
+extern uint16_t vsetx,vsety,vactualx,vactualy,isetx,isety,iactualx,iactualy;
+static FILE mydata = FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 
 double calculateAvgFuelConfumption(double * buffer){
 	double avgFC, sum;
@@ -234,7 +223,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {// 3E - ">" prompt
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_vss);
 
-			sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
+
 
 			if ((filter_41 == 0x41) && (filter_vss == 0x0D)) {
 
@@ -242,7 +231,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 				//kph=18;
 
-				//sprintf(velocity, "%3d  ", kph);
+				sprintf(velocity, "%3d  ", kph);
 
 			}
 
@@ -259,7 +248,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			//fprintf(stdout,"%X %X\n\r", filter_41, filter_vss);
 
 			if ((filter_41 == 0x41) && (filter_rpm == 0x0C)) {
-				LcdGotoXYFont(5, 2);
+
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
 				rpm = rpm_convert(temp_rpm1, temp_rpm2);
@@ -395,8 +384,12 @@ void initialize(void) {
 	sei();
 	// enable interrupts
 
-	LcdInit();
-	LcdClear();
+	stdout = & mydata;
+	ili9341_init();//initial driver setup to drive ili9341
+	ili9341_clear(BLACK);//fill screen with black colour
+	_delay_ms(1000);
+	ili9341_setRotation(3);//rotate screen
+	_delay_ms(2);
 
 	state = Initial;
 
@@ -442,48 +435,7 @@ void state_machine(void) {
 	switch (state) {
 	case Initial:
 
-		//CopyStringtoLCD(LCD_product, 0, 0);
-		//CopyStringtoLCD(LCD_name, 0, 1);
 
-		LcdGotoXYFont(1, 1);
-		LcdFStr(FONT_1X, (unsigned char*) LCD_product);
-
-		LcdGotoXYFont(1, 2);
-		LcdFStr(FONT_1X, (unsigned char*) LCD_name);
-		LcdUpdate();
-
-		_delay_ms(800);
-
-		LcdClear();
-		/*
-		LcdGotoXYFont(1, 1);
-		LcdStr(FONT_1X, (unsigned char*) "V: ");
-
-		LcdGotoXYFont(1, 2);
-		LcdStr(FONT_1X, (unsigned char*) "RPM: ");
-		 */
-
-		LcdGotoXYFont(1, 2);
-		LcdStr(FONT_2X, (unsigned char*) "U:");
-
-		/*
-		LcdGotoXYFont(1, 4);
-		LcdStr(FONT_1X, (unsigned char*) "AO:");
-		*/
-
-		/*
-		LcdGotoXYFont(1, 4);
-		LcdStr(FONT_1X, (unsigned char*) "MAP: ");
-		*/
-
-		LcdGotoXYFont(1, 4);
-		LcdStr(FONT_2X, (unsigned char*) "A:");
-
-
-		LcdGotoXYFont(1, 6);
-		LcdStr(FONT_2X, (unsigned char*) "C:");
-
-		LcdUpdate();
 		state = Trans_Reset;
 
 		break;

@@ -42,7 +42,7 @@
 #include "uart.h"
 
 
-#include "pcd8544.h"
+
 #include "main.h"
 #include <string.h>
 
@@ -72,71 +72,60 @@ extern char lp100kmAvg_str[10];
 volatile uint8_t refreshLCD=0;
 
 void displayData (void){
-
-
+	uint8_t i;
+	ili9341_settextsize(4);
+	_delay_ms(2);
 
 	switch (refreshLCD) {
 
-	/*
-	case 1:
-		LcdGotoXYFont(5, 1);
 
-		LcdStr(FONT_1X, (unsigned char*) velocity);
-		LcdStr(FONT_1X, (unsigned char*) "km/h");
-		refreshLCD = 2;
-		break;
-
-	case 2:
-		LcdGotoXYFont(5, 2);
-		LcdStr(FONT_1X, (unsigned char*) rpm_str);
-		refreshLCD = 3;
-		break;
-		*/
 
 	case 1:
 
+		ili9341_setcursor(0,0);
+		ili9341_settextcolour(GREEN,BLACK);
 
-		LcdGotoXYFont(5, 2);
-		LcdStr(FONT_2X, (unsigned char*) voltage_analog_str);
-		LcdStr(FONT_2X, (unsigned char*) "V");
-		/*
-		LcdGotoXYFont(5, 4);
-		LcdStr(FONT_1X, (unsigned char*) voltage_str);
-		LcdStr(FONT_1X, (unsigned char*) " V ");
-		*/
+		_delay_ms(20);
+		printf("A:%s V",(unsigned char*)voltage_analog_str);
+		_delay_ms(20);
+
 		refreshLCD = 2;
 
 		break;
 
-	/*
+
+
 	case 2:
-			LcdGotoXYFont(5, 4);
-			LcdStr(FONT_1X, (unsigned char*) map_str);
-			//LcdStr(FONT_1X, (unsigned char*) "C");
-			refreshLCD = 3;
-			break;
+
+		ili9341_setcursor(0, 32);
+		ili9341_settextcolour(RED, BLACK);
+		_delay_ms(2);
+
+
+		printf("FC:%s l/100km",(unsigned char*)lp100kmAvg_str);
+		_delay_ms(20);
+/*
+				LcdGotoXYFont(5, 4);
+
+			LcdStr(FONT_2X, (unsigned char*) lp100kmAvg_str);
 			*/
 
-	case 2:
-
-			LcdGotoXYFont(5, 4);
-			//LcdStr(FONT_1X, (unsigned char*) iat_str);
-			LcdStr(FONT_2X, (unsigned char*) lp100kmAvg_str);
-			//LcdStr(FONT_1X, (unsigned char*) "C");
 			refreshLCD = 3;
 			break;
 
 
 	case 3:
-		/*
-		LcdGotoXYFont(6, 6);
-		LcdStr(FONT_1X, (unsigned char*) coolantTemp_str);
-		LcdStr(FONT_1X, (unsigned char*) "C");
-		*/
 
-		LcdGotoXYFont(5, 6);
-		LcdStr(FONT_2X, (unsigned char*) lp100km_str);
-		//LcdStr(FONT_1X, (unsigned char*) "l/100km");
+
+		ili9341_setcursor(0, 64);
+		ili9341_settextcolour(BLUE, BLACK);
+		_delay_ms(2);
+
+		//printf("C: %s l/100km",(unsigned char*)lp100km_str);
+		printf("C: %d l/100km",i++);
+		_delay_ms(20);
+
+
 
 		refreshLCD = 0;
 		break;
@@ -144,8 +133,7 @@ void displayData (void){
 
 
 	}
-	if(refreshLCD>0)
-		LcdUpdate();
+
 }
 
 
@@ -163,6 +151,11 @@ int main()
 	int line=1;
 
 	initialize();
+
+
+
+	//display_init();//display initial data
+
 	InitADC();
 	//LcdInit();
 
