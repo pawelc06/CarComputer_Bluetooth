@@ -4,14 +4,11 @@
 #include <math.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 #include "uart.h"
 #include "obd2.h"
 #include "adc.h"
-
-#include "ili9341.h"
-#include "ili9341gfx.h"
-#define POINTCOLOUR PINK
 
 //State Machine States
 #define Initial 1
@@ -149,8 +146,23 @@ volatile unsigned int month;
 volatile unsigned int year;
 
 /******************************************************************************************/
-extern uint16_t vsetx,vsety,vactualx,vactualy,isetx,isety,iactualx,iactualy;
-static FILE mydata = FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
+// /**
+/*
+ ISR (TIMER1_COMPA_vect) {
+ //Decrement the time if not already zero
+ if (realTimer > 0)
+ --realTimer;
+ if (realTimer == 0) {
+ realTimer = t2;
+ IncrementTime();
+ }
+ if (buttonTimer > 0)
+ --buttonTimer;
+ if (lcdTimer > 0)
+ --lcdTimer;
+
+ }
+ */
 
 double calculateAvgFuelConfumption(double * buffer){
 	double avgFC, sum;
@@ -170,6 +182,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 	uint16_t vAdc;
 	float vAdcf;
+	uint8_t i;
 
 	if (state == Rec_EchoOff) {
 		if (rx_data == 0x3E) {
@@ -206,6 +219,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 			rx_buffer[rx_buffer_index] = 0;
 			strcpy(voltage_str, rx_buffer);
 
+
+
 			vAdc = ReadADC(0);
 			vAdcf = (float) vAdc / 63.0;
 			//vAdc = 123;
@@ -223,15 +238,19 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {// 3E - ">" prompt
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_vss);
 
-
+			//sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
 
 			if ((filter_41 == 0x41) && (filter_vss == 0x0D)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &kph);
 
+
+				//sprintf(velocity, "%3d  ", kph);
+
+
 				//kph=18;
 
-				sprintf(velocity, "%3d  ", kph);
+
 
 			}
 
@@ -248,7 +267,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			//fprintf(stdout,"%X %X\n\r", filter_41, filter_vss);
 
 			if ((filter_41 == 0x41) && (filter_rpm == 0x0C)) {
-
+				LcdGotoXYFont(5, 2);
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
 				rpm = rpm_convert(temp_rpm1, temp_rpm2);
@@ -267,7 +286,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			_delay_ms(30); //was 50
+			//_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_temp);
 
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
@@ -289,7 +308,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			_delay_ms(30); //was 50
+			//_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_map);
 
 			if ((filter_41 == 0x41) && (filter_map == 0x0B)) {
@@ -311,14 +330,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			_delay_ms(30); //was 50
+			//_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_iat);
 
 			if ((filter_41 == 0x41) && (filter_iat == 0x0F)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &iat);
 				//iat = 63;
-				sprintf(iat_str, "%3d  ", iat);
+				sprintf(iat_str, "%3d", iat);
 
 				if(map >0 && iat >0){
 
@@ -332,12 +351,12 @@ void uart0_parse_rx(uint8_t rx_data) {
 					fcn = fcn+1;
 					if(fcn==100){
 						lp100kmAvg = calculateAvgFuelConfumption(fcBuffer);
-						sprintf(lp100kmAvg_str, "%2.1f  ", lp100kmAvg);
+						sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 						fcn = 0;
 					}
 
 					if(lp100km<100)
-					sprintf(lp100km_str, "%2.1f  ", lp100km);
+					sprintf(lp100km_str, "%2.1f", lp100km);
 					//sprintf(lp100km_str, "%3.1f  ", imap);
 					//sprintf(lp100km_str, "%1.2f  ", maf1);
 					//sprintf(lp100km_str, "%1.2f  ", ff);
@@ -371,6 +390,7 @@ void initialize(void) {
 	 PORTD =0b11111100;	// PORT D pullup MAKE SURE THATS OK FOR UART
 	 */
 	OCR1A = 0x3D08; //1 sec
+	//OCR1A = 0x0008; //1 sec
 
 	TCCR1B |= (1 << WGM12);
 	// Mode 4, CTC on OCR1A
@@ -384,12 +404,8 @@ void initialize(void) {
 	sei();
 	// enable interrupts
 
-	stdout = & mydata;
-	ili9341_init();//initial driver setup to drive ili9341
-	ili9341_clear(BLACK);//fill screen with black colour
-	_delay_ms(1000);
-	ili9341_setRotation(3);//rotate screen
-	_delay_ms(2);
+	LcdInit();
+	LcdClear();
 
 	state = Initial;
 
@@ -443,7 +459,7 @@ void state_machine(void) {
 	case Trans_atsp:
 		//uart0_send_byte_array(ATSP,9);
 		uart_nprint(ATSP, 9);
-		_delay_ms(500);
+		//_delay_ms(50);
 		state = Rec_atsp;
 		break;
 
@@ -458,7 +474,7 @@ void state_machine(void) {
 	case Trans_EchoOff:
 		//uart0_send_byte_array(EchoOff,5);
 		uart_nprint(EchoOff, 5);
-		_delay_ms(500);
+		//_delay_ms(50);
 		state = Rec_EchoOff;
 		break;
 
@@ -472,7 +488,7 @@ void state_machine(void) {
 
 	case Trans_Protocol:
 		uart_nprint(ATL, 5);
-		_delay_ms(500);
+		//_delay_ms(50);
 		//UBRR0L = 25;
 		state = Rec_Protocol;
 		break;

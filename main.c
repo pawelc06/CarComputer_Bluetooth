@@ -71,10 +71,13 @@ extern char lp100kmAvg_str[10];
 
 volatile uint8_t refreshLCD=0;
 
+
+static FILE mydata = FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
+
 void displayData (void){
 	uint8_t i;
-	ili9341_settextsize(4);
-	_delay_ms(2);
+	//ili9341_settextsize(4);
+
 
 	switch (refreshLCD) {
 
@@ -85,10 +88,15 @@ void displayData (void){
 		ili9341_setcursor(0,0);
 		ili9341_settextcolour(GREEN,BLACK);
 
-		_delay_ms(20);
-		printf("A:%s V",(unsigned char*)voltage_analog_str);
-		_delay_ms(20);
 
+		ili9341_settextsize(4);
+		printf("Ak:%s",(unsigned char*)voltage_str);
+		/*
+		i=0;
+					while(voltage_str[i]){
+						ili9341_write(voltage_str[i++]);
+					}
+*/
 		refreshLCD = 2;
 
 		break;
@@ -99,16 +107,13 @@ void displayData (void){
 
 		ili9341_setcursor(0, 32);
 		ili9341_settextcolour(RED, BLACK);
-		_delay_ms(2);
 
 
-		printf("FC:%s l/100km",(unsigned char*)lp100kmAvg_str);
-		_delay_ms(20);
-/*
-				LcdGotoXYFont(5, 4);
+		ili9341_settextsize(4);
+		printf("AC:%s",(unsigned char*)lp100kmAvg_str);
 
-			LcdStr(FONT_2X, (unsigned char*) lp100kmAvg_str);
-			*/
+
+
 
 			refreshLCD = 3;
 			break;
@@ -119,11 +124,11 @@ void displayData (void){
 
 		ili9341_setcursor(0, 64);
 		ili9341_settextcolour(BLUE, BLACK);
-		_delay_ms(2);
+		//_delay_ms(2);
 
-		//printf("C: %s l/100km",(unsigned char*)lp100km_str);
-		printf("C: %d l/100km",i++);
-		_delay_ms(20);
+		ili9341_settextsize(4);
+		printf("CC: %s",(unsigned char*)lp100km_str);
+
 
 
 
@@ -148,7 +153,30 @@ ISR (TIMER1_COMPA_vect)
 int main()
 {
 	char data[32];
-	int line=1;
+	int line = 1;
+
+	stdout = &mydata;
+	ili9341_init(); //initial driver setup to drive ili9341
+	ili9341_clear(BLACK); //fill screen with black colour
+
+	ili9341_setRotation(3); //rotate screen
+
+
+
+	ili9341_settextcolour(GREEN, BLACK);
+	ili9341_setcursor(185, 8);
+	ili9341_settextsize(3);
+	printf("V");
+
+	ili9341_settextcolour(RED, BLACK);
+	ili9341_setcursor(185, 41);
+	ili9341_settextsize(3);
+	printf("l/100km");
+
+	ili9341_settextcolour(BLUE, BLACK);
+	ili9341_setcursor(185, 71);
+	ili9341_settextsize(3);
+	printf("l/100km");
 
 	initialize();
 
