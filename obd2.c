@@ -4,11 +4,14 @@
 #include <math.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-#include <string.h>
 
 #include "uart.h"
 #include "obd2.h"
 #include "adc.h"
+
+#include "ili9341.h"
+#include "ili9341gfx.h"
+#define POINTCOLOUR PINK
 
 //State Machine States
 #define Initial 1
@@ -44,25 +47,7 @@
 #define temp_convert(c)				floor((c)-40); 
 #define lph_convert(c)				floor((c)*3.7854); 
 
-//Macro timers
 
-#define t2 50//increment system time ms
-#define t3 25 //debouncer
-#define t4 100 //LCD timer
-
-//State machine state names
-#define NoPush 1
-#define MaybePush 2
-#define Pushed 3
-#define MaybeNoPush 4
-
-#define countmax 3
-
-unsigned char PushFlag;		//message indicating a button push
-unsigned char PushState;	//state machine
-
-//Time Keeping
-volatile unsigned int realTimer, buttonTimer, lcdTimer;
 
 /* Global Variables */
 uint8_t rx_buffer[128];
@@ -146,23 +131,8 @@ volatile unsigned int month;
 volatile unsigned int year;
 
 /******************************************************************************************/
-// /**
-/*
- ISR (TIMER1_COMPA_vect) {
- //Decrement the time if not already zero
- if (realTimer > 0)
- --realTimer;
- if (realTimer == 0) {
- realTimer = t2;
- IncrementTime();
- }
- if (buttonTimer > 0)
- --buttonTimer;
- if (lcdTimer > 0)
- --lcdTimer;
-
- }
- */
+extern uint16_t vsetx,vsety,vactualx,vactualy,isetx,isety,iactualx,iactualy;
+static FILE mydata = FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 
 double calculateAvgFuelConfumption(double * buffer){
 	double avgFC, sum;
@@ -182,7 +152,6 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 	uint16_t vAdc;
 	float vAdcf;
-	uint8_t i;
 
 	if (state == Rec_EchoOff) {
 		if (rx_data == 0x3E) {
@@ -219,8 +188,6 @@ void uart0_parse_rx(uint8_t rx_data) {
 			rx_buffer[rx_buffer_index] = 0;
 			strcpy(voltage_str, rx_buffer);
 
-
-
 			vAdc = ReadADC(0);
 			vAdcf = (float) vAdc / 63.0;
 			//vAdc = 123;
@@ -238,19 +205,15 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {// 3E - ">" prompt
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_vss);
 
-			//sscanf(rx_buffer, "%*s %*s %X %X", &temp_maf1, &temp_maf2);
+
 
 			if ((filter_41 == 0x41) && (filter_vss == 0x0D)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &kph);
 
-
-				//sprintf(velocity, "%3d  ", kph);
-
-
 				//kph=18;
 
-
+				sprintf(velocity, "%3d  ", kph);
 
 			}
 
@@ -267,7 +230,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			//fprintf(stdout,"%X %X\n\r", filter_41, filter_vss);
 
 			if ((filter_41 == 0x41) && (filter_rpm == 0x0C)) {
-				LcdGotoXYFont(5, 2);
+
 
 				sscanf(rx_buffer, "%*s %*s %X %X", &temp_rpm1, &temp_rpm2);
 				rpm = rpm_convert(temp_rpm1, temp_rpm2);
@@ -286,14 +249,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			//_delay_ms(30); //was 50
+			_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_temp);
 
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
 				temperature = temp_convert(temperature);
-				//sprintf(coolantTemp_str, "%3d  ", temperature);
+				sprintf(coolantTemp_str, "%3d", temperature);
 
 			}
 			rx_buffer_index = 0;
@@ -308,14 +271,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			//_delay_ms(30); //was 50
+			_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_map);
 
 			if ((filter_41 == 0x41) && (filter_map == 0x0B)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &map);
 				//map = 43;
-				sprintf(map_str, "%3d  ", map);
+				sprintf(map_str, "%3d", map);
 
 			}
 			rx_buffer_index = 0;
@@ -330,14 +293,14 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			//_delay_ms(30); //was 50
+			_delay_ms(30); //was 50
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_iat);
 
 			if ((filter_41 == 0x41) && (filter_iat == 0x0F)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &iat);
 				//iat = 63;
-				sprintf(iat_str, "%3d", iat);
+				sprintf(iat_str, "%3d  ", iat);
 
 				if(map >0 && iat >0){
 
@@ -375,22 +338,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 }
 
 void initialize(void) {
-	/*
-	 TIMSK1 = 2;		//turn on timer 0 cmp match ISR
-	 OCR1A = 249;  	//set the compare reg to 250 time ticks
-	 TCCR1A = 0b00000010; // turn on clear-on-match
-	 TCCR1B = 0b00000011;	// clock prescalar to 64
 
-	 //FRESULT res;
-	 OCR0A = 0xB3; // avrcalc says that at 3.6864MHz that /8 and CTC 0xB3 will give 10ms
-	 TIMSK0 = (1 << OCIE0A); // use COMP interrupt
-	 TCCR0A = (1 << WGM01) | (1 << CS01); // CTC with div 8
-
-	 DDRD = 0b00001010;	// PORT D is an input except for TX and LED
-	 PORTD =0b11111100;	// PORT D pullup MAKE SURE THATS OK FOR UART
-	 */
 	OCR1A = 0x3D08; //1 sec
-	//OCR1A = 0x0008; //1 sec
 
 	TCCR1B |= (1 << WGM12);
 	// Mode 4, CTC on OCR1A
@@ -404,8 +353,8 @@ void initialize(void) {
 	sei();
 	// enable interrupts
 
-	LcdInit();
-	LcdClear();
+	stdout = & mydata;
+
 
 	state = Initial;
 
@@ -418,30 +367,9 @@ void initialize(void) {
 
 	temperature = 0;
 
-	PushFlag = 0;
-	PushState = NoPush;
 
-	//init the task timer
 
-	realTimer = t2;
-	buttonTimer = t3;
-	lcdTimer = t4;
 
-	//init time
-	millis = 0;
-	secs = 0;
-	sec = 0;
-	mins = 0;
-	hours = 0;
-	day = 22; //dummy day
-	month = 4; //dummy month
-	year = 20; //dummy year
-
-	temp_sec = sec;
-
-	//ADMUX = (1 << ADLAR) | 0b01000010;
-	//ADCSRA = (1<<ADEN) | (1<<ADSC) + 7 ;
-	_delay_ms(500);
 
 	sei();
 }
@@ -459,7 +387,7 @@ void state_machine(void) {
 	case Trans_atsp:
 		//uart0_send_byte_array(ATSP,9);
 		uart_nprint(ATSP, 9);
-		//_delay_ms(50);
+		_delay_ms(500);
 		state = Rec_atsp;
 		break;
 
@@ -474,7 +402,7 @@ void state_machine(void) {
 	case Trans_EchoOff:
 		//uart0_send_byte_array(EchoOff,5);
 		uart_nprint(EchoOff, 5);
-		//_delay_ms(50);
+		_delay_ms(500);
 		state = Rec_EchoOff;
 		break;
 
@@ -488,7 +416,7 @@ void state_machine(void) {
 
 	case Trans_Protocol:
 		uart_nprint(ATL, 5);
-		//_delay_ms(50);
+		_delay_ms(500);
 		//UBRR0L = 25;
 		state = Rec_Protocol;
 		break;
