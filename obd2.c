@@ -314,12 +314,12 @@ void uart0_parse_rx(uint8_t rx_data) {
 					fcn = fcn+1;
 					if(fcn==100){
 						lp100kmAvg = calculateAvgFuelConfumption(fcBuffer);
-						sprintf(lp100kmAvg_str, "%02.1f", lp100kmAvg);
+						sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 						fcn = 0;
 					}
 
 					if(lp100km<100)
-					sprintf(lp100km_str, "%02.1f", lp100km);
+					sprintf(lp100km_str, "%2.1f", lp100km);
 					//sprintf(lp100km_str, "%3.1f  ", imap);
 					//sprintf(lp100km_str, "%1.2f  ", maf1);
 					//sprintf(lp100km_str, "%1.2f  ", ff);
