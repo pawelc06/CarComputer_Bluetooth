@@ -11,6 +11,8 @@
 
 #include "ili9341.h"
 #include "ili9341gfx.h"
+#include "eeprom.h"
+
 #define POINTCOLOUR PINK
 
 //State Machine States
@@ -53,19 +55,6 @@
 uint8_t rx_buffer[128];
 uint8_t rx_buffer_index;
 
-uint8_t lcd_buffer[17];	// LCD display buffer
-//enum {MCU_STATE_IDLE, MCU_STATE_TX};
-//uint8_t error_buffer[40];
-
-//LCD Messages
-const int8_t LCD_product[] PROGMEM = "Komputer sam.";
-const int8_t LCD_name[] PROGMEM = "    by Pawel    ";
-const int8_t LCD_VSS[] PROGMEM = "km/h\0";
-const int8_t LCD_RPM[] PROGMEM = "RPM\0";
-const int8_t LCD_Temp[] PROGMEM = "Temp\0";
-const int8_t LCD_Dist[] PROGMEM = "Dis\0";
-const int8_t LCD_F[] PROGMEM = " C\0";
-const int8_t LCD_empty[] PROGMEM = " \0";
 
 //PID Meassages
 
@@ -171,6 +160,11 @@ void uart0_parse_rx(uint8_t rx_data) {
 	} else if (state == Rec_Reset) {
 		if (rx_data == 0x3E) {
 			rx_buffer_index = 0;
+
+
+			lp100kmAvg = readDoubleFromEEPROM(0);
+			sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
+
 			state = Trans_atsp;
 		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
 			rx_buffer[rx_buffer_index++] = rx_data;
@@ -271,7 +265,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			_delay_ms(30); //was 50
+
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_map);
 
 			if ((filter_41 == 0x41) && (filter_map == 0x0B)) {
@@ -293,7 +287,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 		if (rx_data == 0x3E) {
 
-			_delay_ms(30); //was 50
+
 			sscanf(rx_buffer, "%X %X", &filter_41, &filter_iat);
 
 			if ((filter_41 == 0x41) && (filter_iat == 0x0F)) {
@@ -314,6 +308,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 					fcn = fcn+1;
 					if(fcn==100){
 						lp100kmAvg = calculateAvgFuelConfumption(fcBuffer);
+						saveDoubleInEEPROM(0,lp100kmAvg);
 						sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 						fcn = 0;
 					}
