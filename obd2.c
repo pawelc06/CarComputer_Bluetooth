@@ -97,6 +97,7 @@ volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
 double mpg,lp100km, maf,maf1, gph, lph, kpg,imap,ff,lp100kmAvg;
+//uint32_t lp100kml, mafl,maf1l,ffl,lp100kmAvgl;
 
 int temp, decimalPart;
 
@@ -296,12 +297,19 @@ void uart0_parse_rx(uint8_t rx_data) {
 				//iat = 63;
 				sprintf(iat_str, "%3d  ", iat);
 
-				if(map >0 && iat >0){
+				if(map >0 && kph >0){
 
-				imap = (double)rpm*map/(iat-40+273)/2;
-				maf1 = (imap/60.0)*(0.6)*1.58*28.97/8.314;
-				ff = (maf1*3600.0)/(14.7*820.0);
-				lp100km = ff*100.0/kph;
+
+					imap = (double)rpm*map/(iat-40+273)/2.0;
+					maf1 = (imap/60.0)*(0.6)*1.58*28.97/8.314;
+					ff = (maf1*3600.0)/(14.7*820.0);
+					lp100km = ff*100.0/kph;
+
+				} else {
+					lp100km = 0;
+				}
+
+
 
 				if(lp100km < 100.0f)
 					fcBuffer[fcn] = lp100km;
@@ -314,13 +322,13 @@ void uart0_parse_rx(uint8_t rx_data) {
 					}
 
 					if(lp100km<100)
-					sprintf(lp100km_str, "%2.1f", lp100km);
-					//sprintf(lp100km_str, "%3.1f  ", imap);
-					//sprintf(lp100km_str, "%1.2f  ", maf1);
-					//sprintf(lp100km_str, "%1.2f  ", ff);
-				}
+						sprintf(lp100km_str, "%2.1f", lp100km);
+						//sprintf(lp100km_str, "%3.1f  ", imap);
+						//sprintf(lp100km_str, "%1.2f  ", maf1);
+						//sprintf(lp100km_str, "%1.2f  ", ff);
+					}
 
-			}
+
 			rx_buffer_index = 0;
 			//state = Trans_MPG;
 			state = Trans_Voltage;
