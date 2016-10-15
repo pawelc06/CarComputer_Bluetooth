@@ -96,7 +96,7 @@ int temp_sec;
 volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
-double mpg, lp100km, maf, maf1, gph, lph, kpg, imap, ff, lp100kmAvg;
+double mpg, lp100km, maf, maf1, gph, lph, kpg, imap, ff, lp100kmAvg,lp100kmAvgTemp;
 //uint32_t lp100kml, mafl,maf1l,ffl,lp100kmAvgl;
 
 int temp, decimalPart;
@@ -132,6 +132,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 
 	uint16_t vAdc;
 	float vAdcf;
+	uint8_t i1;
 
 
 	if (state == Rec_EchoOff) {
@@ -178,7 +179,7 @@ void uart0_parse_rx(uint8_t rx_data) {
 			ili9341_settextcolour(RED, BLACK);
 			//_delay_ms(2);
 
-			ili9341_settextsize(4);
+			ili9341_settextsize(2);
 			printf("Ad: %d",  eepromNextSaveAddr);
 
 
@@ -338,17 +339,22 @@ void uart0_parse_rx(uint8_t rx_data) {
 						ili9341_settextcolour(RED, BLACK);
 
 
-						ili9341_settextsize(4);
+						ili9341_settextsize(2);
 						printf("Ad: %d",  eepromNextSaveAddr);
 
 						lp100kmAvg = ((double)eeprom_read_byte(eepromNextSaveAddr-1))/10.0;
 
-						ili9341_setcursor(((eepromNextSaveAddr-2)*60)-((eepromNextSaveAddrInit)*150), 175);
+						//ili9341_setcursor(((eepromNextSaveAddr-2)*60)-((eepromNextSaveAddrInit)*150), 175);
+						ili9341_setcursor(0, 175);
 						ili9341_settextcolour(RED, BLACK);
 
 
 						ili9341_settextsize(2);
-						printf("%.1f,",  lp100kmAvg);
+						for(i1=2; i1<eepromNextSaveAddr;i1++){
+							lp100kmAvgTemp = ((double)eeprom_read_byte(i1))/10.0;
+							printf("%.1f,",  lp100kmAvgTemp);
+						}
+
 					}
 					//saveDoubleInEEPROM(0, lp100kmAvg);
 
