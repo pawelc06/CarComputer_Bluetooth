@@ -353,6 +353,10 @@ void uart0_parse_rx(uint8_t rx_data) {
 						for(i1=2; i1<eepromNextSaveAddr;i1++){
 							lp100kmAvgTemp = ((double)eeprom_read_byte(i1))/10.0;
 							printf("%.1f,",  lp100kmAvgTemp);
+							if(i1==6)
+								ili9341_setcursor(0, 195);
+							if(i1==11)
+								ili9341_setcursor(0, 215);
 						}
 
 					}
