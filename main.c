@@ -24,11 +24,9 @@
 
 extern char voltage_str[10];
 extern char voltage_analog_str[10];
-extern char velocity[10];
-extern char rpm_str[10];
+
 extern char coolantTemp_str[10];
-extern char map_str[10];
-extern char iat_str[10];
+
 extern char lp100km_str[10];
 extern char lp100kmAvg_str[10];
 extern char lp100kmAvgLong_str[10];
