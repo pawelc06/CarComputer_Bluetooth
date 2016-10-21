@@ -1,5 +1,3 @@
-
-
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
@@ -33,10 +31,12 @@ extern char map_str[10];
 extern char iat_str[10];
 extern char lp100km_str[10];
 extern char lp100kmAvg_str[10];
+extern char lp100kmAvgLong_str[10];
 
 volatile uint8_t refreshLCD = 0;
 
-static FILE mydata = FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
+static FILE mydata =
+FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 
 void displayData(void) {
 
@@ -57,36 +57,43 @@ void displayData(void) {
 	case 2:
 
 		ili9341_setcursor(0, 32);
-		ili9341_settextcolour(RED, BLACK);
+		ili9341_settextcolour(BLUE, BLACK);
 
 		ili9341_settextsize(4);
-		printf("AC:%s", (unsigned char*) lp100kmAvg_str);
+		printf("CC:%s", (unsigned char*) lp100km_str);
 
 		refreshLCD = 3;
 		break;
 
 	case 3:
-
 		ili9341_setcursor(0, 64);
-		ili9341_settextcolour(BLUE, BLACK);
-		//_delay_ms(2);
+		ili9341_settextcolour(RED, BLACK);
 
 		ili9341_settextsize(4);
-		printf("CC:%s", (unsigned char*) lp100km_str);
+		printf("AC:%s", (unsigned char*) lp100kmAvg_str);
 
 		refreshLCD = 4;
 		break;
 	case 4:
+		ili9341_setcursor(0, 96);
+		ili9341_settextcolour(ORANGE, BLACK);
 
-			ili9341_setcursor(0, 96);
-			ili9341_settextcolour(PINK, BLACK);
-			//_delay_ms(2);
+		ili9341_settextsize(4);
+		printf("LC:%s", (unsigned char*) lp100kmAvgLong_str);
 
-			ili9341_settextsize(4);
-			printf("Te: %s", (unsigned char*) coolantTemp_str);
+		refreshLCD = 5;
+		break;
+	case 5:
 
-			refreshLCD = 0;
-			break;
+		ili9341_setcursor(0, 138);
+		ili9341_settextcolour(PINK, BLACK);
+		//_delay_ms(2);
+
+		ili9341_settextsize(4);
+		printf("Te: %s", (unsigned char*) coolantTemp_str);
+
+		refreshLCD = 0;
+		break;
 
 	}
 
@@ -113,20 +120,25 @@ int main() {
 	ili9341_settextsize(3);
 	printf("V");
 
-	ili9341_settextcolour(RED, BLACK);
+	ili9341_settextcolour(BLUE, BLACK);
 	ili9341_setcursor(185, 41);
 	ili9341_settextsize(3);
 	printf("l/100km");
 
-	ili9341_settextcolour(BLUE, BLACK);
-	ili9341_setcursor(185, 71);
+	ili9341_settextcolour(RED, BLACK);
+	ili9341_setcursor(185, 75);
+	ili9341_settextsize(3);
+	printf("l/100km");
+
+	ili9341_settextcolour(ORANGE, BLACK);
+	ili9341_setcursor(185, 105);
 	ili9341_settextsize(3);
 	printf("l/100km");
 
 	ili9341_settextcolour(PINK, BLACK);
-		ili9341_setcursor(172, 105);
-		ili9341_settextsize(3);
-		printf(" C");
+	ili9341_setcursor(172, 145);
+	ili9341_settextsize(3);
+	printf(" C");
 
 	initialize();
 

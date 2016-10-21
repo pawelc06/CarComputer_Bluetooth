@@ -79,8 +79,10 @@ volatile char voltage_str[10] = "0.0";
 volatile char voltage_analog_str[10] = "0";
 volatile char map_str[10] = "0";
 volatile char iat_str[10] = "0";
-volatile char lp100km_str[10] = "0";
-volatile char lp100kmAvg_str[10] = "0";
+volatile char lp100km_str[10] = " 0.0";
+volatile char lp100kmAvg_str[10] = " 0.0";
+volatile char lp100kmAvgLong_str[10] = " 0.0";
+
 double fcBuffer[100];
 uint8_t fcn = 0;
 
@@ -96,7 +98,8 @@ int temp_sec;
 volatile unsigned int mph;
 volatile float dist1;
 volatile unsigned int dist;
-double mpg, lp100km, maf, maf1, gph, lph, kpg, imap, ff, lp100kmAvg,lp100kmAvgTemp;
+double mpg, lp100km, maf, maf1, gph, lph, kpg, imap, ff, lp100kmAvg,
+		lp100kmAvgLong, lp100kmAvgTemp;
 //uint32_t lp100kml, mafl,maf1l,ffl,lp100kmAvgl;
 
 int temp, decimalPart;
@@ -107,12 +110,10 @@ uint8_t filter_vss, filter_41, filter_maf, filter_rpm, filter_temp, filter_map,
 unsigned int temp_maf1, temp_maf2;
 unsigned int temp_rpm1, temp_rpm2;
 
-
-
 /******************************************************************************************/
 
 static FILE mydata =
-		FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
+FDEV_SETUP_STREAM(ili9341_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 
 double calculateAvgFuelConsumption(double * buffer) {
 	double avgFC, sum;
@@ -127,13 +128,32 @@ double calculateAvgFuelConsumption(double * buffer) {
 	return avgFC;
 }
 
+double calculateLongTermAvgFuelConsumption() {
+	double avgFC, sum;
+	uint8_t i;
+	uint16_t eepromNextSaveAddr;
+
+	eepromNextSaveAddr = eeprom_read_word(0);
+
+	if (eepromNextSaveAddr == 0xFFFF || eepromNextSaveAddr == 2)
+		return 0.0;
+
+	sum = 0;
+	for (i = 2; i < eepromNextSaveAddr; i++) {
+		sum = sum + eeprom_read_byte(i);
+	}
+	sum = sum / 10.0;
+	avgFC = sum / ((double) (eepromNextSaveAddr - 2));
+
+	return avgFC;
+}
+
 //Parsing function based on current state
 void uart0_parse_rx(uint8_t rx_data) {
 
 	uint16_t vAdc;
 	float vAdcf;
 	uint8_t i1;
-
 
 	if (state == Rec_EchoOff) {
 		if (rx_data == 0x3E) {
@@ -154,38 +174,28 @@ void uart0_parse_rx(uint8_t rx_data) {
 		if (rx_data == 0x3E) {
 			rx_buffer_index = 0;
 
-
 			//eeprom_write_word(0,2);
 
 			eepromNextSaveAddr = eeprom_read_word(0);
 
-			if(eepromNextSaveAddr == 0xFFFF){
-				eeprom_write_word(0,2);
+			if (eepromNextSaveAddr == 0xFFFF) {
+				eeprom_write_word(0, 2);
 				eepromNextSaveAddr = eeprom_read_word(0);
 			}
 
 			eepromNextSaveAddrInit = eepromNextSaveAddr;
 
-			if(eepromNextSaveAddr>2){
-				lp100kmAvg = eeprom_read_byte(eepromNextSaveAddr-1)/10.0;
-				if(lp100kmAvg >= 10.0){
+			if (eepromNextSaveAddr > 2) {
+				lp100kmAvg = eeprom_read_byte(eepromNextSaveAddr - 1) / 10.0;
+				if (lp100kmAvg >= 10.0) {
 					sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 				} else {
 					sprintf(lp100kmAvg_str, " %2.1f", lp100kmAvg);
 				}
+
 			}
 
-			ili9341_setcursor(0, 140);
-			ili9341_settextcolour(RED, BLACK);
-			//_delay_ms(2);
 
-			ili9341_settextsize(2);
-			printf("Ad: %d",  eepromNextSaveAddr);
-
-
-			//lp100kmAvg = readDoubleFromEEPROM(0);
-			lp100kmAvg = eepromNextSaveAddr;
-			//sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 
 			state = Trans_atsp;
 		} else if (rx_data >= 0x20 && rx_data <= 0x5F) {
@@ -269,7 +279,8 @@ void uart0_parse_rx(uint8_t rx_data) {
 			if ((filter_41 == 0x41) && (filter_temp == 0x05)) {
 
 				sscanf(rx_buffer, "%*s %*s %X", &temperature);
-				temperature = temp_convert(temperature);
+				temperature = temp_convert(temperature)
+				;
 				sprintf(coolantTemp_str, "%3d", temperature);
 
 			}
@@ -330,39 +341,41 @@ void uart0_parse_rx(uint8_t rx_data) {
 				fcn = fcn + 1;
 				if (fcn == 100) {
 					lp100kmAvg = calculateAvgFuelConsumption(fcBuffer);
-					if(lp100kmAvg<256.0){
-						eeprom_write_byte(eepromNextSaveAddr++,(uint8_t) (lp100kmAvg*10));
-						eeprom_write_word(0,eepromNextSaveAddr);
+					if (lp100kmAvg < 256.0) {
+						eeprom_write_byte(eepromNextSaveAddr++,
+								(uint8_t) (lp100kmAvg * 10));
+						eeprom_write_word(0, eepromNextSaveAddr);
 
+						/*
 						eepromNextSaveAddr = eeprom_read_word(0);
 						ili9341_setcursor(0, 140);
 						ili9341_settextcolour(RED, BLACK);
 
-
 						ili9341_settextsize(2);
-						printf("Ad: %d",  eepromNextSaveAddr);
+						printf("Ad: %d", eepromNextSaveAddr);
+						*/
 
-						lp100kmAvg = ((double)eeprom_read_byte(eepromNextSaveAddr-1))/10.0;
+						lp100kmAvg = ((double) eeprom_read_byte(eepromNextSaveAddr - 1)) / 10.0;
 
-						//ili9341_setcursor(((eepromNextSaveAddr-2)*60)-((eepromNextSaveAddrInit)*150), 175);
+						/*
 						ili9341_setcursor(0, 175);
 						ili9341_settextcolour(RED, BLACK);
 
-
 						ili9341_settextsize(2);
-						for(i1=2; i1<eepromNextSaveAddr;i1++){
-							lp100kmAvgTemp = ((double)eeprom_read_byte(i1))/10.0;
-							printf("%.1f,",  lp100kmAvgTemp);
-							if(i1==6)
+						for (i1 = 2; i1 < eepromNextSaveAddr; i1++) {
+							lp100kmAvgTemp = ((double) eeprom_read_byte(i1))
+									/ 10.0;
+							printf("%.1f,", lp100kmAvgTemp);
+							if (i1 == 6)
 								ili9341_setcursor(0, 195);
-							if(i1==11)
+							if (i1 == 11)
 								ili9341_setcursor(0, 215);
 						}
+						*/
 
 					}
-					//saveDoubleInEEPROM(0, lp100kmAvg);
 
-					if(lp100kmAvg >= 10.0){
+					if (lp100kmAvg >= 10.0) {
 						sprintf(lp100kmAvg_str, "%2.1f", lp100kmAvg);
 					} else {
 						sprintf(lp100kmAvg_str, " %2.1f", lp100kmAvg);
@@ -371,17 +384,22 @@ void uart0_parse_rx(uint8_t rx_data) {
 					fcn = 0;
 				}
 
-				if (lp100km < 100){
-					if(lp100km >= 10.0)
-					sprintf(lp100km_str, "%2.1f", lp100km);
+				lp100kmAvgLong = calculateLongTermAvgFuelConsumption();
+				if (lp100kmAvgLong < 25.6) {
+					if (lp100kmAvgLong >= 10.0)
+						sprintf(lp100kmAvgLong_str, "%2.1f", lp100kmAvgLong);
+					else
+						sprintf(lp100kmAvgLong_str, "% 2.1f", lp100kmAvgLong);
+				}
+
+				if (lp100km < 100) {
+					if (lp100km >= 10.0)
+						sprintf(lp100km_str, "%2.1f", lp100km);
 					else
 						sprintf(lp100km_str, "% 2.1f", lp100km);
 				}
 
 
-				//sprintf(lp100km_str, "%3.1f  ", imap);
-				//sprintf(lp100km_str, "%1.2f  ", maf1);
-				//sprintf(lp100km_str, "%1.2f  ", ff);
 			}
 
 			rx_buffer_index = 0;
